@@ -7,6 +7,10 @@ import org.apache.beam.sdk.transforms.*;
 import org.apache.beam.sdk.values.KV;
 import org.apache.beam.sdk.values.PCollection;
 
+import java.util.ArrayList;
+import java.util.function.Supplier;
+import java.util.stream.StreamSupport;
+
 public class CountWords {
 
 
@@ -49,12 +53,49 @@ public class CountWords {
     }
   }
 
-  public static class SortCounts
-    extends PTransform<PCollection<KV<String, Long>>, PCollection<KV<String, Long>>> {
+
+  public static class FormatAndSort
+    extends PTransform<PCollection<KV<String, Long>>, PCollection<String>> {
 
     @Override
-    public PCollection<KV<String, Long>> expand(PCollection<KV<String, Long>> counts) {
-      return counts;
+    public PCollection<String> expand(PCollection<KV<String, Long>> counts) {
+
+      PCollection<KV<String, Iterable<KV<String, Long>>>> single_key = counts.apply("CreateKey", ParDo.of(new DoFn<KV<String, Long>, KV<String, KV<String, Long>>>() {
+                    @ProcessElement
+                    public void processElement(ProcessContext c) {
+                        KV<String, Long> element = c.element();
+                        String key = element.getKey();
+                        c.output(KV.of("single", KV.of(key, element.getValue())));
+                    }
+                }))
+                .apply(GroupByKey.create());
+
+      PCollection<String> formatted_output = single_key.apply("FormatResults",
+                        MapElements.via(
+                                new SimpleFunction<KV<String, Iterable<KV<String, Long>>>, String>() {
+                                    @Override
+                                    public String apply(KV<String, Iterable<KV<String, Long>>> input) {
+                                        return StreamSupport.stream(input.getValue().spliterator(), false)
+                                                .collect((Supplier<ArrayList<KV<String, Long>>>) ArrayList::new,
+                                                        (al, kv) -> al.add(KV.of(kv.getKey(), kv.getValue())),
+                                                        (sb, kv) -> {
+                                                        })
+                                                .stream()
+                                                .sorted((kv1, kv2) -> {
+                                                  int res = kv2.getValue().compareTo(kv1.getValue());
+                                                  if (res == 0)
+                                                      res = kv2.getKey().compareTo(kv1.getKey());
+                                                  return res;
+                                                })
+                                                .collect(StringBuilder::new,
+                                                        (sb, kv) -> sb.append(String.format("%20s : %d%n", kv.getKey(), kv.getValue())),
+                                                        (sb, kv) -> {
+                                                        }).toString();
+                                    }
+                                }
+                        ));
+
+      return formatted_output;
     }
   }
 
@@ -78,8 +119,7 @@ public class CountWords {
     // static FormatAsTextFn() to the ParDo transform.
     p.apply("ReadLines", TextIO.read().from(options.getInputFile()))
         .apply(new CountWordInstances())
-        .apply(new SortCounts())
-        .apply(MapElements.via(new FormatAsTextFn()))
+        .apply(new FormatAndSort())
         .apply("WriteCounts", TextIO.write().to(options.getOutput()));
 
     p.run().waitUntilFinish();
