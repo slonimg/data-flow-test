@@ -49,6 +49,15 @@ public class CountWords {
     }
   }
 
+  public static class SortCounts
+    extends PTransform<PCollection<KV<String, Long>>, PCollection<KV<String, Long>>> {
+
+    @Override
+    public PCollection<KV<String, Long>> expand(PCollection<KV<String, Long>> counts) {
+      return counts;
+    }
+  }
+
   public interface CountWordsOptions extends PipelineOptions {
 
     @Description("Path of the file to read from")
@@ -69,6 +78,7 @@ public class CountWords {
     // static FormatAsTextFn() to the ParDo transform.
     p.apply("ReadLines", TextIO.read().from(options.getInputFile()))
         .apply(new CountWordInstances())
+        .apply(new SortCounts())
         .apply(MapElements.via(new FormatAsTextFn()))
         .apply("WriteCounts", TextIO.write().to(options.getOutput()));
 
