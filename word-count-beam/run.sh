@@ -10,18 +10,18 @@ if [[ $1 = "local" ]]; then
      -Dexec.args="--inputFile=$INPUT --output=$OUTPUT" -Pdirect-runner
 else
     PROJECT=$2 # <your-gcp-project>
-    TMP=$3 # gs://<your-gcs-bucket>/tmp
+    STAGING=$3 # gs://<your-gcs-bucket>/staging
     INPUT=$4 # gs://apache-beam-samples/shakespeare/*
     OUTPUT=$5 # gs://<your-gcs-bucket>/counts
     echo 'Running with dataflow runner.'
     echo "Google project id: $PROJECT"
-    echo "Staging folder: $TMP"
+    echo "Staging folder: $STAGING"
     echo "Input: gs://apache-beam-samples/shakespeare/*"
     echo "Output: $OUTPUT"
 
     mvn compile exec:java -Dexec.mainClass=org.apache.beam.examples.CountWords \
      -Dexec.args="--runner=DataflowRunner --project=$PROJECT \
-                  --gcpTempLocation=$TMP \
+                  --stagingLocation=$STAGING \
                   --inputFile=$INPUT --output=$OUTPUT" \
      -Pdataflow-runner
 fi
