@@ -19,8 +19,6 @@ import org.junit.runners.JUnit4;
 import java.util.Arrays;
 import java.util.List;
 
-import static org.apache.beam.examples.WordCountTest.COUNTS_ARRAY;
-
 @RunWith(JUnit4.class)
 public class CountWordsTest {
 
@@ -37,6 +35,11 @@ public class CountWordsTest {
         CoreMatchers.hasItems("some", "input", "words"));
   }
 
+  @Test
+  public void testFormatAndSort() throws Exception {
+
+  }
+
   @Rule
   public TestPipeline p = TestPipeline.create();
 
@@ -48,6 +51,8 @@ public class CountWordsTest {
       };
 
   static final List<String> WORDS = Arrays.asList(WORDS_ARRAY);
+
+  static final String[] COUNTS_ARRAY = new String[] {"hi: 5", "there: 1", "sue: 2", "bob: 2"};
 
   @Test
   @Category(ValidatesRunner.class)
