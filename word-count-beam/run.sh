@@ -1,18 +1,18 @@
 #!/usr/bin/env bash
 
-if [[ $1 = "local" ]]; then
-    INPUT=$2
-    OUTPUT=$3
+if [[ $3 = "" ]]; then
+    INPUT=$1
+    OUTPUT=$2
     echo 'Running with direct runner'
     echo 'Input: pom.xml'
     echo "Output: $OUTPUT"
     mvn compile exec:java -Dexec.mainClass=org.apache.beam.examples.CountWords \
      -Dexec.args="--inputFile=$INPUT --output=$OUTPUT" -Pdirect-runner
 else
-    PROJECT=$2 # <your-gcp-project>
-    STAGING=$3 # gs://<your-gcs-bucket>/staging
-    INPUT=$4 # gs://apache-beam-samples/shakespeare/*
-    OUTPUT=$5 # gs://<your-gcs-bucket>/counts
+    PROJECT=$1 # <your-gcp-project>
+    STAGING=$2 # gs://<your-gcs-bucket>/staging
+    INPUT=$3 # gs://apache-beam-samples/shakespeare/*
+    OUTPUT=$4 # gs://<your-gcs-bucket>/counts
     echo 'Running with dataflow runner.'
     echo "Google project id: $PROJECT"
     echo "Staging folder: $STAGING"
