@@ -53,6 +53,27 @@ public class CountWords {
     }
   }
 
+  public static class FormatAndSortFn extends SimpleFunction<KV<String, Iterable<KV<String, Long>>>, String> {
+    @Override
+    public String apply(KV<String, Iterable<KV<String, Long>>> input) {
+      return StreamSupport.stream(input.getValue().spliterator(), false)
+          .collect((Supplier<ArrayList<KV<String, Long>>>) ArrayList::new,
+              (al, kv) -> al.add(KV.of(kv.getKey(), kv.getValue())),
+              (sb, kv) -> {
+              })
+          .stream()
+          .sorted((kv1, kv2) -> {
+            int res = kv2.getValue().compareTo(kv1.getValue());
+            if (res == 0)
+              res = kv2.getKey().compareTo(kv1.getKey());
+            return res;
+          })
+          .collect(StringBuilder::new,
+              (sb, kv) -> sb.append(String.format("%20s : %d%n", kv.getKey(), kv.getValue())),
+              (sb, kv) -> {
+              }).toString();
+    }
+  }
 
   public static class FormatAndSort
     extends PTransform<PCollection<KV<String, Long>>, PCollection<String>> {
@@ -60,7 +81,7 @@ public class CountWords {
     @Override
     public PCollection<String> expand(PCollection<KV<String, Long>> counts) {
 
-      PCollection<KV<String, Iterable<KV<String, Long>>>> single_key = counts.apply("CreateKey", ParDo.of(new DoFn<KV<String, Long>, KV<String, KV<String, Long>>>() {
+      PCollection<KV<String, Iterable<KV<String, Long>>>> single_key = counts.apply("CreateSingleKey", ParDo.of(new DoFn<KV<String, Long>, KV<String, KV<String, Long>>>() {
                     @ProcessElement
                     public void processElement(ProcessContext c) {
                         KV<String, Long> element = c.element();
@@ -70,32 +91,7 @@ public class CountWords {
                 }))
                 .apply(GroupByKey.create());
 
-      PCollection<String> formatted_output = single_key.apply("FormatResults",
-                        MapElements.via(
-                                new SimpleFunction<KV<String, Iterable<KV<String, Long>>>, String>() {
-                                    @Override
-                                    public String apply(KV<String, Iterable<KV<String, Long>>> input) {
-                                        return StreamSupport.stream(input.getValue().spliterator(), false)
-                                                .collect((Supplier<ArrayList<KV<String, Long>>>) ArrayList::new,
-                                                        (al, kv) -> al.add(KV.of(kv.getKey(), kv.getValue())),
-                                                        (sb, kv) -> {
-                                                        })
-                                                .stream()
-                                                .sorted((kv1, kv2) -> {
-                                                  int res = kv2.getValue().compareTo(kv1.getValue());
-                                                  if (res == 0)
-                                                      res = kv2.getKey().compareTo(kv1.getKey());
-                                                  return res;
-                                                })
-                                                .collect(StringBuilder::new,
-                                                        (sb, kv) -> sb.append(String.format("%20s : %d%n", kv.getKey(), kv.getValue())),
-                                                        (sb, kv) -> {
-                                                        }).toString();
-                                    }
-                                }
-                        ));
-
-      return formatted_output;
+      return single_key.apply("SortAndFormatResults", MapElements.via(new FormatAndSortFn()));
     }
   }
 
