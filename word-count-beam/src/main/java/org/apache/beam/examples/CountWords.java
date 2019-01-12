@@ -111,8 +111,6 @@ public class CountWords {
   static void runWordCount(CountWordsOptions options) {
     Pipeline p = Pipeline.create(options);
 
-    // Concepts #2 and #3: Our pipeline applies the composite CountWords transform, and passes the
-    // static FormatAsTextFn() to the ParDo transform.
     p.apply("ReadLines", TextIO.read().from(options.getInputFile()))
         .apply(new CountWordInstances())
         .apply(new FormatAndSort())
